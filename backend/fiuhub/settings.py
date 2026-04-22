@@ -87,11 +87,6 @@ DATABASES = {
     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-
-# Allow all hosts for Railway, restrict in production as needed
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
-
 # ─── Cache / Channel Layer (Redis) ──────────────────────────────────────────────
 REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 
