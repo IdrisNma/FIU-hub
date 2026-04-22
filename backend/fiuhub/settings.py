@@ -187,8 +187,11 @@ USE_I18N = True
 USE_TZ = True
 
 # ─── Static / Media ─────────────────────────────────────────────────────────────
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = '/static/'  # Updated for deployment
+import os  # Ensure os is imported for STATIC_ROOT
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Updated for deployment
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
