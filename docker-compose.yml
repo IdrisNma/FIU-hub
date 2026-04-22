@@ -1,0 +1,107 @@
+version: '3.9'
+
+services:
+  # ── Postgres ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       fiuhub
+      POSTGRES_USER:     fiuhub
+      POSTGRES_PASSWORD: fiuhubpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fiuhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Django / Daphne ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py makemigrations accounts posts news alerts typologies qa groups events jurisdictions --noinput &&
+             python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             daphne -b 0.0.0.0 -p 8000 fiuhub.asgi:application"
+    volumes:
+      - ./backend:/app
+      - media_files:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://fiuhub:fiuhubpass@postgres:5432/fiuhub
+      REDIS_URL:    redis://redis:6379/0
+
+  # ── Celery worker ─────────────────────────────────────────────────────────
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A fiuhub worker -l info -c 4
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+    environment:
+      DATABASE_URL: postgres://fiuhub:fiuhubpass@postgres:5432/fiuhub
+      REDIS_URL:    redis://redis:6379/0
+
+  # ── Celery Beat scheduler ─────────────────────────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A fiuhub beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+    environment:
+      DATABASE_URL: postgres://fiuhub:fiuhubpass@postgres:5432/fiuhub
+      REDIS_URL:    redis://redis:6379/0
+
+  # ── React / Vite dev server ────────────────────────────────────────────────
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+
+volumes:
+  postgres_data:
+  media_files:
