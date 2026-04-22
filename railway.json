@@ -1,0 +1,4 @@
+{
+  "build": "pip install -r backend/requirements.txt",
+  "start": "python backend/manage.py migrate && python backend/manage.py collectstatic --noinput && python backend/manage.py runserver 0.0.0.0:$PORT"
+}
