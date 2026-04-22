@@ -80,15 +80,15 @@ ASGI_APPLICATION = 'fiuhub.asgi.application'
 
 # ─── Database ───────────────────────────────────────────────────────────────────
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='fiuhub'),
-        'USER': config('DB_USER', default='fiuhub_user'),
-        'PASSWORD': config('DB_PASSWORD', default='fiuhub_pass'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-    }
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
+import dj_database_url
+import os
+
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+# Allow all hosts for Railway, restrict in production as needed
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # ─── Cache / Channel Layer (Redis) ──────────────────────────────────────────────
 REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
